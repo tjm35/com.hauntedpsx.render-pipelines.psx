@@ -155,8 +155,8 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                         // With Free Bleed Pixel Perfect, rasterization width and height are just targets.
                         // The actual width and height are adjusted to get as close as possible to the target, while still remaining pixel perfect, and avoiding black bars.
                         // This results in a change of aspect ratio unless the screen resolution is a perfect multiple of the rasterization resolution target.
-                        rasterizationWidth = camera.pixelWidth / Mathf.CeilToInt((float)camera.pixelWidth / (float)rasterizationWidth);
-                        rasterizationHeight = camera.pixelHeight / Mathf.CeilToInt((float)camera.pixelHeight / (float)rasterizationHeight);
+                        rasterizationWidth = camera.pixelWidth / Mathf.FloorToInt((float)camera.pixelWidth / (float)rasterizationWidth);
+                        rasterizationHeight = camera.pixelHeight / Mathf.FloorToInt((float)camera.pixelHeight / (float)rasterizationHeight);
                     }
 
                     // Compute uniform for handling the potential rasterization render target aspect ratio vs CRT shader render target aspect ratio discrepancy.
