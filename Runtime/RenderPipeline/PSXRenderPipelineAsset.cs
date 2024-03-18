@@ -6,7 +6,7 @@ using UnityEngine.Serialization;
 
 namespace HauntedPSX.RenderPipelines.PSX.Runtime
 {
-    public partial class PSXRenderPipelineAsset : RenderPipelineAsset
+    public partial class PSXRenderPipelineAsset : RenderPipelineAsset<PSXRenderPipeline>
     {
         PSXRenderPipelineAsset()
         {
@@ -77,10 +77,14 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
         {
             get { return null; } // TODO
         }
+        
+        public override string renderPipelineShaderTag => "PSXRenderPipeline";
     #endif
 
         [SerializeField]
         public PSXRenderPipelineResources renderPipelineResources;
+        [SerializeField] 
+        public VolumeProfile defaultProfile;
         
         // TODO: Currently the SRP Batcher is forced off due to a D3D11 swap chain crash in HPSXRP.
         // Expose this option to users once the SRP Batcher stabilizes / once the engine is fixed.

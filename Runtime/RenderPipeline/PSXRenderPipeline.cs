@@ -40,6 +40,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
         {
             ConfigureGlobalRenderPipelineTag();
             ConfigureSRPBatcherFromAsset(m_Asset);
+            ConfigureVolumeManager(m_Asset);
         }
 
         static void ConfigureGlobalRenderPipelineTag()
@@ -55,6 +56,11 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
             // Currently they are incompatible due to different variants sampling lightmap textures in the vertex shader and others sampling in the fragment shader.
             // GraphicsSettings.useScriptableRenderPipelineBatching = asset.isSRPBatcherEnabled;
             GraphicsSettings.useScriptableRenderPipelineBatching = false;
+        }
+
+        static void ConfigureVolumeManager(PSXRenderPipelineAsset asset)
+        {
+            VolumeManager.instance.Initialize(null, asset.defaultProfile);
         }
 
         void FindComputeKernels()
@@ -86,6 +92,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
             CoreUtils.Destroy(crtMaterial);
             compressionCSKernels = null;
             DisposeLighting();
+            VolumeManager.instance.Deinitialize();
         }
 
         void PushCameraParameters(Camera camera, PSXCamera psxCamera, CommandBuffer cmd, out int rasterizationWidth, out int rasterizationHeight, out Vector4 cameraAspectModeUVScaleBias, bool isPSXQualityEnabled)
