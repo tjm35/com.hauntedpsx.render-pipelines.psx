@@ -7,7 +7,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
     [Serializable, VolumeComponentMenu("HauntedPS1/LightingVolume")]
     public class LightingVolume : VolumeComponent
     {
-        public BoolParameter lightingIsEnabled = new BoolParameter(false);
+        public BoolParameter lightingIsEnabled = new BoolParameter(true);
         public MinFloatParameter bakedLightingMultiplier = new MinFloatParameter(1.0f, 0.0f);
         public MinFloatParameter vertexColorLightingMultiplier = new MinFloatParameter(0.0f, 0.0f);
         public MinFloatParameter dynamicLightingMultiplier = new MinFloatParameter(1.0f, 0.0f);

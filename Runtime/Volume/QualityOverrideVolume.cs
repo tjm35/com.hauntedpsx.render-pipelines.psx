@@ -7,9 +7,9 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
     [Serializable, VolumeComponentMenu("HauntedPS1/QualityOverrideVolume")]
     public class QualityOverrideVolume : VolumeComponent
     {
-        // Default to PSX Quality Disabled so that prefab editing is easier
-        // (most of the time you do not want to edit prefabs with low / pixelated / CRT settings on)
-        public BoolParameter isPSXQualityEnabled = new BoolParameter(false);
+        // Default to PSX Quality Enabled so that it's easier to get a project "first working"
+        // (you can disable it in the default profile if you do not want to edit prefabs with low / pixelated / CRT settings on)
+        public BoolParameter isPSXQualityEnabled = new BoolParameter(true);
 
         static QualityOverrideVolume s_Default = null;
         public static QualityOverrideVolume @default
