@@ -306,30 +306,25 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                     PushSkyParameters(camera, cmd, skyMaterial, m_Asset, rasterizationWidth, rasterizationHeight);
                     PushTerrainGrassParameters(camera, cmd, m_Asset, rasterizationWidth, rasterizationHeight);
                     PSXRenderPipeline.DrawFullScreenQuad(cmd, skyMaterial);
-                    context.ExecuteCommandBuffer(cmd);
-                    cmd.Release();
 
-                    DrawBackgroundOpaque(context, camera, ref cullingResults);
-                    DrawBackgroundTransparent(context, camera, ref cullingResults);
+                    DrawBackgroundOpaque(cmd, context, camera, ref cullingResults);
+                    DrawBackgroundTransparent(cmd, context, camera, ref cullingResults);
 
-                    cmd = CommandBufferPool.Get(PSXStringConstants.s_CommandBufferRenderPreMainStr);
                     PushPreMainParameters(camera, cmd);
-                    context.ExecuteCommandBuffer(cmd);
-                    cmd.Release();
                     
-                    DrawMainOpaque(context, camera, ref cullingResults);
-                    DrawMainTransparent(context, camera, ref cullingResults);
+                    DrawMainOpaque(cmd, context, camera, ref cullingResults);
+                    DrawMainTransparent(cmd, context, camera, ref cullingResults);
 
-                    cmd = CommandBufferPool.Get(PSXStringConstants.s_CommandBufferRenderPreUIOverlayStr);
                     TryDrawAccumulationMotionBlurPreUIOverlay(psxCamera, cmd, accumulationMotionBlurMaterial, copyColorRespectFlipYMaterial);
                     PushPreUIOverlayParameters(camera, cmd);
+
+                    DrawUIOverlayOpaque(cmd, context, camera, ref cullingResults);
+                    DrawUIOverlayTransparent(cmd, context, camera, ref cullingResults);
+
+                    DrawLegacyCanvasUI(cmd, context, camera, ref cullingResults);
+                    
                     context.ExecuteCommandBuffer(cmd);
                     cmd.Release();
-
-                    DrawUIOverlayOpaque(context, camera, ref cullingResults);
-                    DrawUIOverlayTransparent(context, camera, ref cullingResults);
-
-                    DrawLegacyCanvasUI(context, camera, ref cullingResults);
 
                     // TODO: Draw post image effect gizmos before or after CRT filter?
                     DrawGizmos(context, camera, GizmoSubset.PreImageEffects);
@@ -1600,37 +1595,37 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
         #endif
         }
 
-        static void DrawBackgroundOpaque(ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
+        static void DrawBackgroundOpaque(CommandBuffer cmd, ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
         {
-            DrawOpaque(context, camera, PSXRenderQueue.k_RenderQueue_BackgroundAllOpaque, ref cullingResults);
+            DrawOpaque(cmd, context, camera, PSXRenderQueue.k_RenderQueue_BackgroundAllOpaque, ref cullingResults);
         }
 
-        static void DrawBackgroundTransparent(ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
+        static void DrawBackgroundTransparent(CommandBuffer cmd, ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
         {
-            DrawTransparent(context, camera, PSXRenderQueue.k_RenderQueue_BackgroundTransparent, ref cullingResults);
+            DrawTransparent(cmd, context, camera, PSXRenderQueue.k_RenderQueue_BackgroundTransparent, ref cullingResults);
         }
 
-        static void DrawMainOpaque(ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
+        static void DrawMainOpaque(CommandBuffer cmd, ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
         {
-            DrawOpaque(context, camera, PSXRenderQueue.k_RenderQueue_MainAllOpaque, ref cullingResults);
+            DrawOpaque(cmd, context, camera, PSXRenderQueue.k_RenderQueue_MainAllOpaque, ref cullingResults);
         }
 
-        static void DrawMainTransparent(ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
+        static void DrawMainTransparent(CommandBuffer cmd, ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
         {
-            DrawTransparent(context, camera, PSXRenderQueue.k_RenderQueue_MainTransparent, ref cullingResults);
+            DrawTransparent(cmd, context, camera, PSXRenderQueue.k_RenderQueue_MainTransparent, ref cullingResults);
         }
 
-        static void DrawUIOverlayOpaque(ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
+        static void DrawUIOverlayOpaque(CommandBuffer cmd, ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
         {
-            DrawOpaque(context, camera, PSXRenderQueue.k_RenderQueue_UIOverlayAllOpaque, ref cullingResults);
+            DrawOpaque(cmd, context, camera, PSXRenderQueue.k_RenderQueue_UIOverlayAllOpaque, ref cullingResults);
         }
 
-        static void DrawUIOverlayTransparent(ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
+        static void DrawUIOverlayTransparent(CommandBuffer cmd, ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
         {
-            DrawTransparent(context, camera, PSXRenderQueue.k_RenderQueue_UIOverlayTransparent, ref cullingResults);
+            DrawTransparent(cmd, context, camera, PSXRenderQueue.k_RenderQueue_UIOverlayTransparent, ref cullingResults);
         }
 
-        static void DrawOpaque(ScriptableRenderContext context, Camera camera, RenderQueueRange range, ref CullingResults cullingResults)
+        static void DrawOpaque(CommandBuffer cmd, ScriptableRenderContext context, Camera camera, RenderQueueRange range, ref CullingResults cullingResults)
         {
             // If the depth buffer is disabled, trigger back to front rendering, instead of QuantizedFrontToBack rendering.
             // Note there are additional criteria flags that we always care about, such as SortingLayer, RenderQueue, etc, which are outlined here:
@@ -1652,15 +1647,11 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
             };
                 
             var rendererList = context.CreateRendererList(rendererListDesc);
-            
-            var buffer = new CommandBuffer();
-            buffer.name = "DrawOpaque";
-            buffer.DrawRendererList(rendererList);
-            context.ExecuteCommandBuffer(buffer);
-            buffer.Release();
+
+            cmd.DrawRendererList(rendererList);
         }
 
-        static void DrawTransparent(ScriptableRenderContext context, Camera camera, RenderQueueRange range, ref CullingResults cullingResults)
+        static void DrawTransparent(CommandBuffer cmd, ScriptableRenderContext context, Camera camera, RenderQueueRange range, ref CullingResults cullingResults)
         {
             // Draw transparent objects using PSX shader pass
             var rendererListDesc = new RendererListDesc(PSXShaderPassNames.s_PSXLit, cullingResults, camera)
@@ -1675,25 +1666,17 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 
             var rendererList = context.CreateRendererList(rendererListDesc);
             
-            var buffer = new CommandBuffer();
-            buffer.name = "DrawTransparent";
-            buffer.DrawRendererList(rendererList);
-            context.ExecuteCommandBuffer(buffer);
-            buffer.Release();
+            cmd.DrawRendererList(rendererList);
         }
 
-        static void DrawSkybox(ScriptableRenderContext context, Camera camera)
+        static void DrawSkybox(CommandBuffer cmd, ScriptableRenderContext context, Camera camera)
         {
             var rendererList = context.CreateSkyboxRendererList(camera);
             
-            var buffer = new CommandBuffer();
-            buffer.name = "DrawSkybox";
-            buffer.DrawRendererList(rendererList);
-            context.ExecuteCommandBuffer(buffer);
-            buffer.Release();
+            cmd.DrawRendererList(rendererList);
         }
 
-        static void DrawLegacyCanvasUI(ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
+        static void DrawLegacyCanvasUI(CommandBuffer cmd, ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
         {
             // Draw legacy Canvas UI meshes.
             var rendererListDesc = new RendererListDesc(PSXShaderPassNames.s_SRPDefaultUnlit, cullingResults, camera)
@@ -1707,11 +1690,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 
             var rendererList = context.CreateRendererList(rendererListDesc);
             
-            var buffer = new CommandBuffer();
-            buffer.name = "DrawLegacyCanvasUI";
-            buffer.DrawRendererList(rendererList);
-            context.ExecuteCommandBuffer(buffer);
-            buffer.Release();
+            cmd.DrawRendererList(rendererList);
         }
 
         // Respects RTHandle scaling.
