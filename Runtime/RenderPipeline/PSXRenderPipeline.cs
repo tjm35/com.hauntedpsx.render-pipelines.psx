@@ -5,6 +5,7 @@ using UnityEngine.Experimental.Rendering;
 using System.Collections.Generic;
 using UnityEditor;
 using System.ComponentModel;
+using UnityEngine.Rendering.RendererUtils;
 
 namespace HauntedPSX.RenderPipelines.PSX.Runtime
 {
@@ -1640,72 +1641,77 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 : ((SortingCriteria.CommonOpaque & (~SortingCriteria.QuantizedFrontToBack)) | SortingCriteria.BackToFront);
 
             // Draw opaque objects using PSX shader pass
-            var sortingSettings = new SortingSettings(camera)
+            var rendererListDesc = new RendererListDesc(PSXShaderPassNames.s_PSXLit, cullingResults, camera)
             {
-                criteria = criteria
-            };
-
-            var drawingSettings = new DrawingSettings(PSXShaderPassNames.s_PSXLit, sortingSettings)
-            {
-                perObjectData = ComputePerObjectDataFromLightingVolume(camera)
-            };
-            
-            var filteringSettings = new FilteringSettings()
-            {
-                renderQueueRange = range,
                 layerMask = camera.cullingMask, // Respect the culling mask specified on the camera so that users can selectively omit specific layers from rendering to this camera.
+                sortingCriteria = criteria,
+                excludeObjectMotionVectors = false,
+                rendererConfiguration = ComputePerObjectDataFromLightingVolume(camera),
                 renderingLayerMask = UInt32.MaxValue, // Everything
-                excludeMotionVectorObjects = false
+                renderQueueRange = range,
             };
-
-            context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+                
+            var rendererList = context.CreateRendererList(rendererListDesc);
+            
+            var buffer = new CommandBuffer();
+            buffer.name = "DrawOpaque";
+            buffer.DrawRendererList(rendererList);
+            context.ExecuteCommandBuffer(buffer);
+            buffer.Release();
         }
 
         static void DrawTransparent(ScriptableRenderContext context, Camera camera, RenderQueueRange range, ref CullingResults cullingResults)
         {
             // Draw transparent objects using PSX shader pass
-            var sortingSettings = new SortingSettings(camera)
+            var rendererListDesc = new RendererListDesc(PSXShaderPassNames.s_PSXLit, cullingResults, camera)
             {
-                criteria = SortingCriteria.CommonTransparent
-            };
-
-            var drawingSettings = new DrawingSettings(PSXShaderPassNames.s_PSXLit, sortingSettings)
-            {
-                perObjectData = ComputePerObjectDataFromLightingVolume(camera)
-            };
-            
-            var filteringSettings = new FilteringSettings()
-            {
-                renderQueueRange = range,
                 layerMask = camera.cullingMask, // Respect the culling mask specified on the camera so that users can selectively omit specific layers from rendering to this camera.
+                sortingCriteria = SortingCriteria.CommonTransparent,
+                excludeObjectMotionVectors = false,
+                rendererConfiguration = ComputePerObjectDataFromLightingVolume(camera),
                 renderingLayerMask = UInt32.MaxValue, // Everything
-                excludeMotionVectorObjects = false
+                renderQueueRange = range,
             };
-
-            context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+                
+            var rendererList = context.CreateRendererList(rendererListDesc);
+            
+            var buffer = new CommandBuffer();
+            buffer.name = "DrawTransparent";
+            buffer.DrawRendererList(rendererList);
+            context.ExecuteCommandBuffer(buffer);
+            buffer.Release();
         }
 
         static void DrawSkybox(ScriptableRenderContext context, Camera camera)
         {
-            context.DrawSkybox(camera);
+            var rendererList = context.CreateSkyboxRendererList(camera);
+            
+            var buffer = new CommandBuffer();
+            buffer.name = "DrawSkybox";
+            buffer.DrawRendererList(rendererList);
+            context.ExecuteCommandBuffer(buffer);
+            buffer.Release();
         }
 
         static void DrawLegacyCanvasUI(ScriptableRenderContext context, Camera camera, ref CullingResults cullingResults)
         {
             // Draw legacy Canvas UI meshes.
-            var sortingSettings = new SortingSettings(camera)
+            var rendererListDesc = new RendererListDesc(PSXShaderPassNames.s_SRPDefaultUnlit, cullingResults, camera)
             {
-                criteria = SortingCriteria.CommonTransparent
-            };
-            var drawSettings = new DrawingSettings(PSXShaderPassNames.s_SRPDefaultUnlit, sortingSettings);
-            var filterSettings = new FilteringSettings()
-            {
-                renderQueueRange = RenderQueueRange.all,
                 layerMask = camera.cullingMask, // Respect the culling mask specified on the camera so that users can selectively omit specific layers from rendering to this camera.
+                sortingCriteria = SortingCriteria.CommonTransparent,
+                excludeObjectMotionVectors = false,
                 renderingLayerMask = UInt32.MaxValue, // Everything
-                excludeMotionVectorObjects = false
+                renderQueueRange = RenderQueueRange.all,
             };
-            context.DrawRenderers(cullingResults, ref drawSettings, ref filterSettings);
+                
+            var rendererList = context.CreateRendererList(rendererListDesc);
+            
+            var buffer = new CommandBuffer();
+            buffer.name = "DrawLegacyCanvasUI";
+            buffer.DrawRendererList(rendererList);
+            context.ExecuteCommandBuffer(buffer);
+            buffer.Release();
         }
 
         // Respects RTHandle scaling.
@@ -1808,7 +1814,6 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
             if (buildTarget == UnityEditor.BuildTarget.StandaloneWindows ||
                 buildTarget == UnityEditor.BuildTarget.StandaloneWindows64 ||
                 buildTarget == UnityEditor.BuildTarget.StandaloneLinux64 ||
-                buildTarget == UnityEditor.BuildTarget.Stadia ||
                 buildTarget == UnityEditor.BuildTarget.StandaloneOSX ||
                 buildTarget == UnityEditor.BuildTarget.WSAPlayer ||
                 buildTarget == UnityEditor.BuildTarget.XboxOne ||
